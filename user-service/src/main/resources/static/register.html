@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    form {
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    input {
+      margin-bottom: 15px;
+      padding: 10px;
+      width: 250px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      display: block;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #message {
+      margin-top: 15px;
+      color: green;
+    }
+
+    #error {
+      margin-top: 15px;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h2>User Registration</h2>
+  <form id="registerForm">
+    <input type="text" id="name" placeholder="Full Name" required />
+    <input type="email" id="email" placeholder="Email" required />
+    <input type="password" id="password" placeholder="Password" required />
+    <button type="submit">Register</button>
+  </form>
+
+  <p id="message"></p>
+  <p id="error"></p>
+
+  <script>
+    const API_BASE = "http://localhost:8080/api";
+
+    document.getElementById("registerForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      document.getElementById("message").innerText = "";
+      document.getElementById("error").innerText = "";
+
+      try {
+        const res = await fetch(`${API_BASE}/auth/register`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ name, email, password })
+        });
+
+        const contentType = res.headers.get("content-type");
+        if (res.ok) {
+          if (contentType && contentType.includes("application/json")) {
+            const data = await res.json();
+            document.getElementById("message").innerText = data.message || "Registration successful!";
+          } else {
+            document.getElementById("message").innerText = "Registration successful!";
+          }
+          setTimeout(() => window.location.href = "/login.html", 2000);
+        } else {
+          const errData = await res.json();
+          document.getElementById("error").innerText = errData.message || "Registration failed.";
+        }
+
+      } catch (err) {
+        document.getElementById("error").innerText = "Server error. Please try again.";
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>

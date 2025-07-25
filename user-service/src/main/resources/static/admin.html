@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Panel</title>
+</head>
+<body>
+  <h1>🔐 Admin Login</h1>
+  <input type="email" id="adminEmail" placeholder="Admin Email" value="admin@bank.com"><br><br>
+  <input type="password" id="adminPassword" placeholder="Password" value="admin123"><br><br>
+  <button onclick="adminLogin()">Login</button>
+
+  <h2>Admin Controls</h2>
+  <button onclick="getAllUsers()">👥 Get All Users</button><br><br>
+
+  <input type="text" id="blockEmail" placeholder="Email to block">
+  <button onclick="blockUser()">🚫 Block User</button><br><br>
+
+  <input type="text" id="unblockEmail" placeholder="Email to unblock">
+  <button onclick="unblockUser()">✅ Unblock User</button><br><br>
+
+  <input type="text" id="deleteEmail" placeholder="Email to delete">
+  <button onclick="deleteUser()">🗑️ Delete User</button><br><br>
+
+  <button onclick="viewLogs()">📜 View Logs</button><br><br>
+
+  <h3>📋 Response:</h3>
+  <div id="usersTable"></div>
+  <div id="transactions"></div>
+  <pre id="output"></pre>
+
+  <script>
+    let token = "";
+
+    function adminLogin() {
+      const email = document.getElementById("adminEmail").value;
+      const password = document.getElementById("adminPassword").value;
+
+      fetch("http://localhost:8080/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        token = data.token;
+        alert("✅ Admin logged in successfully!");
+      })
+      .catch(err => {
+        alert("❌ Login failed");
+        console.error(err);
+      });
+    }
+
+    function getAllUsers() {
+      fetch('http://localhost:8080/api/admin/users', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        const container = document.getElementById('usersTable');
+        container.innerHTML = "";
+        document.getElementById("transactions").innerHTML = "";
+
+        if (!Array.isArray(data) || data.length === 0) {
+          container.innerHTML = "<p>No users found.</p>";
+          return;
+        }
+
+        let table = "<table border='1' cellpadding='10' cellspacing='0'>";
+        table += "<tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Balance</th><th>Action</th></tr>";
+
+        data.forEach(user => {
+          table += `<tr>
+                      <td>${user.name}</td>
+                      <td>${user.email}</td>
+                      <td>${user.role || 'USER'}</td>
+                      <td>${user.blocked ? 'Blocked' : 'Active'}</td>
+                      <td>₹${user.balance || 0}</td>
+                      <td><button onclick="viewTransactions('${user.email}')">View More</button></td>
+                    </tr>`;
+        });
+
+        table += "</table>";
+        container.innerHTML = table;
+      })
+      .catch(err => {
+        document.getElementById("usersTable").innerHTML = "<p>Error loading users</p>";
+        console.error(err);
+      });
+    }
+
+    function viewTransactions(email) {
+      fetch(`http://localhost:8080/api/admin/transactions/${email}?limit=5`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(transactions => {
+        const container = document.getElementById("transactions");
+        if (!Array.isArray(transactions) || transactions.length === 0) {
+          container.innerHTML = `<h4>No transactions found for ${email}</h4>`;
+          return;
+        }
+
+        let html = `<h3>Last 5 Transactions for ${email}</h3>`;
+        html += "<table border='1' cellpadding='10'><tr><th>Type</th><th>Amount</th><th>Date</th></tr>";
+        transactions.forEach(tx => {
+          html += `<tr>
+                    <td>${tx.type}</td>
+                    <td>₹${tx.amount}</td>
+                    <td>${new Date(tx.date).toLocaleString()}</td>
+                  </tr>`;
+        });
+        html += "</table>";
+
+        container.innerHTML = html;
+      })
+      .catch(err => {
+        document.getElementById("transactions").innerHTML = "<p>Error loading transactions</p>";
+        console.error(err);
+      });
+    }
+
+    function blockUser() {
+      const email = document.getElementById("blockEmail").value;
+      fetch(`http://localhost:8080/api/admin/block/${email}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.text())
+      .then(msg => document.getElementById("output").textContent = msg);
+    }
+
+    function unblockUser() {
+      const email = document.getElementById("unblockEmail").value;
+      fetch(`http://localhost:8080/api/admin/unblock/${email}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.text())
+      .then(msg => document.getElementById("output").textContent = msg);
+    }
+
+    function deleteUser() {
+      const email = document.getElementById("deleteEmail").value;
+      fetch(`http://localhost:8080/api/admin/delete/${email}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.text())
+      .then(msg => document.getElementById("output").textContent = msg);
+    }
+
+    function viewLogs() {
+      fetch(`http://localhost:8080/api/admin/logs`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.text())
+      .then(data => document.getElementById("output").textContent = data);
+    }
+  </script>
+</body>
+</html>
